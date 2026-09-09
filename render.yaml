@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: stremio-http-addon
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /manifest.json
