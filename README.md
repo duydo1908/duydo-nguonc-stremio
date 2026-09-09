@@ -73,7 +73,27 @@ curl 'http://127.0.0.1:7000/stream/series/nguonc:hoa-thien-cot:episode:tap-1.jso
 
 ## Deploy
 
-The included Dockerfile and `render.yaml` support container deployment. Push the project to your repository, connect it to your hosting provider, and expose the service over HTTPS. Install the resulting `https://YOUR-HOST/manifest.json` URL in Stremio. No public deployment is created by running this project locally.
+### Railway
+
+The included `railway.json` builds the existing Dockerfile and checks `/manifest.json` before marking the deployment ready. No database or persistent volume is needed.
+
+1. Push this project, including `railway.json`, to your GitHub repository.
+2. In [Railway](https://railway.com/new), create a project from a GitHub repository and select `duydo1908/duydo-nguonc-stremio` (or your fork).
+3. Use the repository root as the service root. Railway uses the Dockerfile's build and start commands; leave command overrides empty.
+4. In service **Variables**, set `PORT=7000`. Leave `NGUONC_API_BASE` unset to use the default source API.
+5. After deployment succeeds, open **Settings → Networking → Public Networking → Generate Domain**. Use target port `7000` if prompted.
+6. Open `https://YOUR-HOST/manifest.json` and `https://YOUR-HOST/catalog/movie/nguonc-movie.json`. The manifest should contain add-on metadata, and the catalog should contain a nonempty `metas` array. If the catalog is empty, inspect the deployment logs for upstream errors.
+7. Paste `https://YOUR-HOST/manifest.json` into Stremio's add-on installation field. Test a title and its sources before retiring the old Render service.
+
+Railway's [pricing](https://docs.railway.com/pricing/plans) currently includes a limited Free plan with $1 monthly credit and a Hobby plan starting at $5/month, with $5 of usage included. Additional usage costs extra; free credit does not guarantee a full month of hosting. Check the current plan and usage limits before enabling billing.
+
+The manifest healthcheck confirms that the add-on is running; it does not verify NguonC access or playback. A different host may still receive upstream HTTP 403 responses. Confirm catalog and playback behavior on the deployed service before treating the migration as successful.
+
+See Railway's [Dockerfile guide](https://docs.railway.com/builds/dockerfiles), [configuration reference](https://docs.railway.com/config-as-code/reference), and [public networking guide](https://docs.railway.com/networking/public-networking).
+
+### Other container hosts
+
+The included Dockerfile supports other container hosts; `render.yaml` is retained for Render. Expose the service over HTTPS and install `https://YOUR-HOST/manifest.json` in Stremio. No public deployment is created by running this project locally.
 
 ```bash
 docker build -t stremio-nguonc .
