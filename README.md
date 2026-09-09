@@ -29,12 +29,17 @@ For development, use `npm run dev`. Run `npm test` for the build and automated p
 - Posters, descriptions, genres, cast and directors where supplied.
 - Series episode lists with alternate language/server choices.
 - Direct HLS playback when an episode includes `m3u8`.
-- **Open in browser** choices when only an `embed` player URL is supplied.
+- Native HLS resolution for supported `embed.streamc.xyz` players through their bootstrap and playback-token endpoints.
+- **Open in browser** fallback for unsupported players, failed resolution, or verification requirements.
 - Five-minute bounded API caching, shared concurrent requests, and 15-second request timeouts.
 
 ## Source limitations
 
-The live movie and series samples checked during development exposed only `embed` URLs. These are HTML player pages, so they are returned as Stremio `externalUrl` choices. They will open outside Stremio; they are not native playable stream URLs. The add-on does not extract hidden video URLs from player pages. Direct HLS handling is covered by fixture tests; end-to-end playback has not been verified in the Stremio app.
+The resolver lives in `src/nguonc/resolver.ts`. The player inspected on September 9, 2026 uses `bootstrap` followed by `issue`, with `playlist_format: "hls"` for native playback. This yields a plain HLS playlist without decrypting the AES-GCM format used by its JavaScript player. The resolver validates the returned playlist before exposing it to Stremio and supplies playback request headers through `behaviorHints.proxyHeaders`. It does not execute player scripts. Unknown hosts and players requiring interactive verification fall back to browser links.
+
+Live verification retrieved a plain playlist and a 1 KB segment sample using curl. However, Node's HTTP clients received Cloudflare HTTP 403 from the same bootstrap endpoint on this machine, so the implemented resolver fell back to the browser during its live smoke test. Native playback is therefore conditional on upstream acceptance of requests from your deployment; it is not confirmed working end to end in Stremio. Automated tests cover successful resolution, invalid/encrypted responses, failures, and browser fallback.
+
+Stream responses use `cacheMaxAge: 0` to avoid reusing expiring playback tokens. Concurrent resolutions for the same embed share a request, with a 12-second deadline per resolution and a 2 MB response limit. Player URLs are restricted to the observed HTTPS host and redirects are rejected. Future player protocol or host changes should be handled in the resolver module.
 
 Titles use `nguonc:<slug>` identifiers. Streams appear on this add-on's own catalog/search results; they do not attach to Cinemeta/IMDb titles. The documented source endpoints do not provide an IMDb lookup.
 

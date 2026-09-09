@@ -4,7 +4,7 @@ import { getStreams } from "./streamProvider.js";
 
 export const manifest = {
   id: "community.nguonc", version: "1.0.0", name: "NguonC",
-  description: "Phim lẻ và phim bộ từ NguonC. Browse and search Vietnamese titles; embed-only sources open in your browser.",
+  description: "Phim lẻ và phim bộ từ NguonC. Browse and search Vietnamese titles with HLS playback and browser fallback.",
   resources: ["catalog", "meta", "stream"], types: ["movie", "series"], idPrefixes: ["nguonc:"],
   catalogs: (["movie", "series"] as const).flatMap(type => [
     { type, id: `nguonc-${type}`, name: type === "movie" ? "NguonC — Phim lẻ" : "NguonC — Phim bộ", extra: [{ name: "skip" }] },
@@ -39,7 +39,7 @@ export function createAddon(source: NguonC = provider) {
     } catch (error) { console.error("NguonC metadata:", error); return { meta: null, cacheMaxAge: 0 }; }
   });
   builder.defineStreamHandler(async ({ type, id }: Args) => {
-    try { return { streams: await getStreams(type, id, source), cacheMaxAge: 300 }; }
+    try { return { streams: await getStreams(type, id, source), cacheMaxAge: 0 }; }
     catch (error) { console.error("NguonC streams:", error); return { streams: [], cacheMaxAge: 0 }; }
   });
   return builder.getInterface();
