@@ -54,6 +54,12 @@ NguonC commonly lists seasons as separate titles. Each title's episodes are disp
 
 Set variables in your shell or hosting settings. `.env` files are not loaded automatically.
 
+## Empty catalogs on a hosted service
+
+If Render logs show `NguonC HTTP 403`, the upstream API denied the hosting server's request. API requests include a User-Agent and a Referer matching the configured API origin for compatibility, but these headers do not guarantee access from a hosting provider. Deploy the updated code and check the catalog again. A persistent 403 requires investigating upstream access restrictions; changing Stremio's installation will not fix that denial. The same add-on can be run locally using the instructions above to compare access from your own network.
+
+Check that `NGUONC_API_BASE` is unset or points to the intended API (the default is `https://phim.nguonc.com/api`). Failed requests are not cached. Logs identify the upstream host/path and flag explicit Cloudflare challenge responses without recording response bodies.
+
 ## Example requests
 
 ```bash

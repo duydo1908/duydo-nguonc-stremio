@@ -12,6 +12,33 @@ const series = { slug: 'test-series', name: 'Test Series', total_episodes: 10, e
   { server_name: 'Dubbed', items: [{ name: '2', slug: 'tap-2', embed: 'https://example.com/dubbed' }] },
 ] };
 function client(handler) { return new NguonC('https://api.example/api', async url => Response.json(handler(new URL(url)))); }
+test('API requests include player-compatible headers and use the configured origin', async () => {
+  const source = new NguonC('https://api.example/api', async (url, options) => {
+    assert.equal(url, 'https://api.example/api/film/test-film');
+    assert.equal(options.headers.Accept, 'application/json');
+    assert.equal(options.headers['User-Agent'], 'Mozilla/5.0');
+    assert.equal(options.headers.Referer, 'https://api.example/');
+    return Response.json({ status: 'success', movie });
+  });
+  assert.equal((await source.film('test-film')).slug, movie.slug);
+});
+test('denied API requests report the upstream failure and are not cached', async () => {
+  let calls = 0;
+  const source = new NguonC('https://api.example/api', async () => {
+    calls++;
+    return calls === 1
+      ? new Response('private upstream response', { status: 403, headers: { 'cf-mitigated': 'challenge' } })
+      : Response.json({ status: 'success', movie });
+  });
+  await assert.rejects(source.film('test-film'), error => {
+    assert.match(error.message, /HTTP 403 from https:\/\/api.example\/api\/film\/test-film/);
+    assert.match(error.message, /Cloudflare challenge/);
+    assert.doesNotMatch(error.message, /private upstream response/);
+    return true;
+  });
+  assert.equal((await source.film('test-film')).slug, movie.slug);
+  assert.equal(calls, 2);
+});
 test('series videos share episode IDs across servers and sort numerically', () => {
   const meta = toMeta(series, 'series', true);
   assert.deepEqual(meta.videos.map(v => v.episode), [2, 10]);

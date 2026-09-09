@@ -21,8 +21,23 @@ export class NguonC {
     const pending = this.pending.get(path);
     if (pending) return pending as Promise<T>;
     const work = (async () => {
-      const response = await this.fetcher(`${this.base.replace(/\/$/, "")}${path}`, { signal: AbortSignal.timeout(15000), headers: { Accept: "application/json" } });
-      if (!response.ok) throw new Error(`NguonC HTTP ${response.status}`);
+      const url = new URL(`${this.base.replace(/\/$/, "")}${path}`);
+      const response = await this.fetcher(url.href, {
+        signal: AbortSignal.timeout(15000),
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "Mozilla/5.0",
+          Referer: `${url.origin}/`,
+        },
+      });
+      if (!response.ok) {
+        // Record routing diagnostics without logging response bodies or credentials.
+        const challenge = response.headers.get("cf-mitigated") === "challenge";
+        await response.body?.cancel();
+        throw new Error(`NguonC HTTP ${response.status} from ${url.origin}${url.pathname}` +
+          (response.status === 403 ? ": upstream denied access; request headers or hosting IP may be restricted" : "") +
+          (challenge ? " (Cloudflare challenge)" : ""));
+      }
       const value = await response.json() as { status?: string };
       if (value.status !== "success") throw new Error("NguonC returned an unsuccessful response");
       if (this.cache.size >= 300) this.cache.delete(this.cache.keys().next().value!);
